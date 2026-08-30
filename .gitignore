@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Unused scratch artifacts - not read/written by any pipeline module
+X_pruned_cache.npy
+wins_cache.npy
+y_train_cache.npy
