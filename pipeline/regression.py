@@ -9,8 +9,8 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold
 from sklearn.svm import SVR
 
-from feature_selection import select_features
-from scale import scale_features
+from .feature_selection import select_features
+from .scale import scale_features
 
 
 def _family(candidate_name):

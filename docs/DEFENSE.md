@@ -274,8 +274,9 @@ whenever the pipeline or data changes).
       should be yes, with a passing suite.
 - [ ] Have `DOCUMENTATION.md` open in a second window/tab in case a question needs a deeper answer
       than this script covers.
-- [ ] Know where each number above comes from in the code (`regression.py`, `feature_selection.py`,
-      `outliers.py`, `scale.py`, `impute.py`, `split.py`) in case asked to point at the line.
+- [ ] Know where each number above comes from in the code (`pipeline/regression.py`,
+      `pipeline/feature_selection.py`, `pipeline/outliers.py`, `pipeline/scale.py`,
+      `pipeline/impute.py`, `pipeline/split.py`) in case asked to point at the line.
 
 ## Likely defense questions not already covered above
 
@@ -289,5 +290,5 @@ whenever the pipeline or data changes).
   do not quote a number from this document, since it will drift as the pipeline changes.
 - **"Could you have leaked test data anywhere?"** — No: `X_test.csv` never contributes to fitting
   any statistic (imputer, scaler, feature selector, or model) — it's only ever `.transform()`'d or
-  `.predict()`'d, and this is enforced by explicit unit tests per module (`test_*.py` for each
+  `.predict()`'d, and this is enforced by explicit unit tests per module (`tests/test_*.py` for each
   pipeline stage).

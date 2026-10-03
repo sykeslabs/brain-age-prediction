@@ -1,6 +1,6 @@
 import numpy as np
 
-from scale import scale_features
+from pipeline.scale import scale_features
 
 
 def test_train_median_maps_to_zero():

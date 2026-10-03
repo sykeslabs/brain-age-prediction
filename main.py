@@ -1,16 +1,22 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
-from impute import fill_missing_values
-from outliers import remove_cell_outliers, remove_outliers
-from regression import select_best_model
-from split import split_train_validation
+from pipeline.impute import fill_missing_values
+from pipeline.outliers import remove_cell_outliers, remove_outliers
+from pipeline.regression import select_best_model
+from pipeline.split import split_train_validation
+
+PROJECT_DIR = Path(__file__).resolve().parent
+DATA_DIR = PROJECT_DIR / "data"
+OUTPUT_DIR = PROJECT_DIR / "outputs"
 
 
 def load_data():
-    X_train_df = pd.read_csv("X_train.csv")
-    y_train_df = pd.read_csv("y_train.csv")
-    X_test_df = pd.read_csv("X_test.csv")
+    X_train_df = pd.read_csv(DATA_DIR / "X_train.csv")
+    y_train_df = pd.read_csv(DATA_DIR / "y_train.csv")
+    X_test_df = pd.read_csv(DATA_DIR / "X_test.csv")
     return X_train_df, y_train_df, X_test_df
 
 

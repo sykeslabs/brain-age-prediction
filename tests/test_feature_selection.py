@@ -1,6 +1,6 @@
 import numpy as np
 
-from feature_selection import select_features
+from pipeline.feature_selection import select_features
 
 
 def _signal_redundant_and_noise_dataset(n_samples=200, n_noise=10, random_state=0):

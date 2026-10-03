@@ -11,15 +11,31 @@ Predict a person's age from 832 numeric features per subject. The provided featu
 ## Commands
 
 - Run the full pipeline: `python main.py`
-- Run tests: `python -m pytest`
+- Run tests: `python -m pytest` (`pytest.ini` sets `testpaths = tests` and puts the repo root on `pythonpath`, so `from pipeline.<module> import ...` resolves)
+- Install dependencies: `pip install -r requirements.txt`
 - No linter is configured yet.
-- `regression.py` depends on `catboost` (`pip install catboost`) in addition to the usual numpy/pandas/scikit-learn stack — one of the regression candidate families.
+- `pipeline/regression.py` depends on `catboost` (`pip install catboost`) in addition to the usual numpy/pandas/scikit-learn stack — one of the regression candidate families.
 
 ## Testing
 
-Always use pytest for tests. Each pipeline module (`impute.py`, `outliers.py`, `feature_selection.py`, `scale.py`, `regression.py`) gets a matching `test_*.py` file. Run `python -m pytest` at the end of every change, before considering it done.
+Always use pytest for tests. Each pipeline module (`pipeline/split.py`, `pipeline/impute.py`, `pipeline/outliers.py`, `pipeline/feature_selection.py`, `pipeline/scale.py`, `pipeline/regression.py`) gets a matching `tests/test_*.py` file. Run `python -m pytest` at the end of every change, before considering it done.
+
+## Repository layout
+
+```
+main.py          entry point; reads from data/, writes outputs/submission.csv
+pipeline/        one module per pipeline stage (package; modules import each other relatively)
+tests/           pytest suite, one test_<module>.py per pipeline module
+data/            original competition CSVs (read-only, see below)
+outputs/         generated files (submission.csv)
+docs/            DOCUMENTATION.md (experiment log), DEFENSE.md (presentation script)
+```
+
+`main.py` resolves `data/` and `outputs/` relative to its own location (`Path(__file__)`), so it works from any working directory.
 
 ## Data files
+
+All input CSVs live in `data/`.
 
 - `X_train.csv` — 1212 rows, columns `id, x0..x831` (832 numeric features, contains NaNs and outlier rows).
 - `y_train.csv` — 1212 rows, columns `id, y`. Target `y` is age, observed range roughly 50–90.
@@ -32,7 +48,7 @@ Row order in `X_train.csv` matches `y_train.csv` (`id` is a 0-based row index in
 
 ## Pipeline architecture
 
-`main.py` is the entry point and orchestrates the pipeline as sequential stages, each in its own module:
+`main.py` is the entry point and orchestrates the pipeline as sequential stages, each in its own module under `pipeline/`:
 
 0. **`split.py`** — Split the provided training data into train/validation (`val_size=0.1`, `random_state=42`) before any other stage runs. Validation is never used to pick a model or hyperparameters (see stage 6) — only to compute an honest post-hoc diagnostic and, once selection is already locked in, to help fit the model actually deployed (see "Final refit" under stage 6). `val_size=0.1`, not the more conventional 0.2: sensitivity-checked via nested CV — more rows left in the training fold directly means larger CV folds inside `select_best_model`, which measurably tightened the selection signal for a fixed RandomForest config (cv std dropped ~46%, 0.0688→0.0372, mean also rose 0.4656→0.4896) at no cost to the deployed model, since the final refit uses train+validation combined regardless of this ratio. (Caveat: this gain didn't compose as cleanly as hoped once combined with the `k=2.5` change below and the full 31-candidate grid — that same RandomForest config's std actually rose slightly in the full pipeline, 0.0750 vs the isolated 0.0372 — so treat the individual-lever numbers above as directional, not as guaranteed to add up; the combined configuration's own end-to-end CV score is what's tracked in stage 6.)
 1. **`outliers.py: remove_cell_outliers`** — Corrects extreme *individual cell* values (a handful of (row, feature) values replaced with implausible numbers, scattered across many different rows) as distinct from whole anomalous *rows* (stage 3). Runs BEFORE imputation, on train/val/**test alike** (unlike row-level removal below, which is train-only) — per-column IQR bounds (`k=2.5`) are fit on the training fold only, then any value outside those bounds in any split becomes NaN, to be filled by the same imputer as any other missing value. `k=2.5`, not the more conventional 3.0: sensitivity-checked via nested CV across 2.0-4.0 with a fixed model — 2.5 gave both a higher mean R² and a notably tighter std (0.0463 vs 0.0688 at k=3.0), i.e. tighter bounds catch more real corruption without over-flagging legitimate values. Added because a single corrupted cell among hundreds of features barely shifts a row's overall multivariate anomaly score, so `IsolationForest` (stage 3) is nearly blind to this failure mode — and because row-level removal never touched validation/test at all, cell-level correction was the first thing in the whole pipeline that actually corrects test-set feature values before predicting on them.
@@ -60,7 +76,7 @@ Row order in `X_train.csv` matches `y_train.csv` (`id` is a 0-based row index in
 
    **Final refit (`refit_on_combined=True` by default)**: once `best` is chosen by CV (using only `X_train` — this step never influences selection), its exact winning configuration is refit on train+validation **combined** before it generates any prediction — standard Kaggle practice: selection must never see validation, but the model that actually produces `submission.csv` should use every labeled row available, not leave ~20% of it on the table. `cv_r2_mean`/`val_r2`/`train_r2` on `best` are computed *before* this refit and are left untouched — they remain honest diagnostics of the train-only fit that was used to pick the model, not a description of what `best["model"]` now actually is. For the stacked ensemble, only the base-model champions are refit on the combined data; the meta-learner's blend weights are **not** refit — they stay as learned from the honest out-of-fold matrix over `X_train`'s own CV folds, the same asymmetry already used when going from fold-level to full-training-fold fits. Set `refit_on_combined=False` to keep the model actually fit on train-only (e.g. for a test that wants to isolate this behavior).
 
-`main.py` wires these stages together in order (split → cell-level outlier correction → impute → remove outlier rows → select best model, which internally does feature selection + scaling + regression + the final combined-data refit), prints every candidate's CV mean±std / train / validation R² with the selected one marked, and writes `submission.csv` in the `sample.csv` format (columns `id, y`).
+`main.py` wires these stages together in order (split → cell-level outlier correction → impute → remove outlier rows → select best model, which internally does feature selection + scaling + regression + the final combined-data refit), prints every candidate's CV mean±std / train / validation R² with the selected one marked, and writes `outputs/submission.csv` in the `sample.csv` format (columns `id, y`).
 
 Keep each stage's fit/transform split explicit: statistics or selectors learned from the training fold must be reused (not refit) when transforming validation or test data.
 

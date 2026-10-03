@@ -1,6 +1,6 @@
 import numpy as np
 
-from impute import fill_missing_values
+from pipeline.impute import fill_missing_values
 
 
 def test_no_missing_values_unchanged():

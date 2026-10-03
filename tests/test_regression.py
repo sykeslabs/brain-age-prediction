@@ -3,7 +3,7 @@ import pytest
 from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression, Ridge
 
-from regression import select_best_model
+from pipeline.regression import select_best_model
 
 
 def _linear_dataset(n_train=150, n_val=50, n_test=30, n_features=5, random_state=0):

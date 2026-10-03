@@ -1,6 +1,6 @@
 import numpy as np
 
-from outliers import remove_cell_outliers, remove_outliers
+from pipeline.outliers import remove_cell_outliers, remove_outliers
 
 
 def _cluster_with_outliers(n_outliers):

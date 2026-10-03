@@ -1,6 +1,6 @@
 import numpy as np
 
-from split import split_train_validation
+from pipeline.split import split_train_validation
 
 
 def test_split_sizes_match_val_size():
